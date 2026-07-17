@@ -42,8 +42,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 11
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -69,7 +67,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Filesystem vulnerability and misconfiguration scan
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -78,7 +76,7 @@ jobs:
           exit-code: "1"
       - run: docker build -f apps/gateway/Dockerfile -t mcp-sentinel/gateway:scan .
       - name: Gateway container scan
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: mcp-sentinel/gateway:scan
           severity: HIGH,CRITICAL
