@@ -1,10 +1,10 @@
-FROM golang:1.20-alpine AS build
+FROM golang:1.26.5-alpine3.24 AS build
 WORKDIR /src
 COPY apps/gateway/go.mod ./
 COPY apps/gateway/cmd ./cmd
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/sentinel-gateway ./cmd/sentinel-gateway
 
-FROM alpine:3.22
+FROM alpine:3.24
 RUN apk add --no-cache ca-certificates \
     && addgroup -g 65532 sentinel \
     && adduser -D -u 65532 -G sentinel sentinel
