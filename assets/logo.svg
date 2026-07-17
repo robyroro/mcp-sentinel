@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">MCP Sentinel logo</title>
+  <desc id="desc">A shield enclosed by protocol connection brackets.</desc>
+  <defs>
+    <linearGradient id="g" x1="24" y1="20" x2="232" y2="236" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#56E7BD"/><stop offset="1" stop-color="#32B5E2"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="62" fill="#081520"/>
+  <path d="M72 76H52v104h20M184 76h20v104h-20" fill="none" stroke="url(#g)" stroke-width="15" stroke-linecap="round"/>
+  <path d="M128 48 79 67v48c0 43 21 76 49 91 28-15 49-48 49-91V67l-49-19Z" fill="url(#g)"/>
+  <path d="M128 73 101 83v32c0 27 11 49 27 61 16-12 27-34 27-61V83l-27-10Z" fill="#081520"/>
+</svg>

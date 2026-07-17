@@ -1,0 +1,36 @@
+name: Security rule request
+description: Propose a deterministic policy, detector, or risk signal.
+title: "[Rule]: "
+labels: [security-rule, needs-triage]
+body:
+  - type: dropdown
+    id: rule_type
+    attributes:
+      label: Rule type
+      options: [Policy matcher, Secret detector, Network guard, Path guard, Command guard, Injection indicator, Risk signal]
+    validations: {required: true}
+  - type: textarea
+    id: threat
+    attributes: {label: Threat or behavior detected}
+    validations: {required: true}
+  - type: textarea
+    id: examples
+    attributes:
+      label: Synthetic positive examples
+      description: Use fake, invalid fixtures only.
+    validations: {required: true}
+  - type: textarea
+    id: negatives
+    attributes: {label: Likely false positives and negative examples}
+    validations: {required: true}
+  - type: textarea
+    id: action
+    attributes: {label: Recommended action and rationale}
+    validations: {required: true}
+  - type: checkboxes
+    id: fixtures
+    attributes:
+      label: Fixture safety
+      options:
+        - label: All examples are synthetic and contain no working secrets or exploit payloads against third parties.
+          required: true

@@ -1,0 +1,53 @@
+version: "1"
+name: coding-agent-restricted
+revision: 1.2.0
+defaults:
+  decision: deny
+clients:
+  include: [codex-local]
+servers:
+  include: [development-tools]
+rules:
+  - id: deny-secret-access
+    description: Credential locations are never exposed to coding agents.
+    action: deny
+    match:
+      tool: filesystem.read_file
+      arguments:
+        path:
+          matches_any: ["**/.env", "**/.ssh/**", "**/credentials*"]
+  - id: deny-destructive-shell
+    description: Destructive and download-to-shell commands are blocked.
+    action: deny
+    match:
+      tool: terminal.execute
+      arguments:
+        command:
+          contains_any: ["rm -rf", "mkfs", "shutdown", "curl | sh", "wget | bash"]
+  - id: allow-repository-read
+    description: Read operations stay inside the mounted demo workspace.
+    action: allow
+    match:
+      tool: filesystem.read_file
+      arguments:
+        path:
+          within: ["/workspace/project"]
+  - id: require-approval-for-write
+    description: Writes require a human reviewer.
+    action: require_approval
+    match:
+      tool:
+        any_of: [filesystem.write_file, filesystem.delete_file]
+  - id: allow-tests
+    description: Known test commands are allowed.
+    action: allow
+    match:
+      tool: terminal.execute
+      arguments:
+        command:
+          starts_with_any: ["pnpm test", "npm test", "pytest", "go test"]
+limits:
+  max_tool_calls_per_session: 100
+  max_concurrent_calls: 5
+  max_runtime_seconds: 900
+  max_payload_bytes: 1048576

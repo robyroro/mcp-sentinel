@@ -1,0 +1,79 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcp-sentinel"
+version = "0.1.0"
+description = "Security gateway, policy engine, approval layer, and observability for MCP"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+dependencies = [
+  "alembic>=1.14,<2",
+  "argon2-cffi>=23.1,<26",
+  "cryptography>=48.0.1,<49",
+  "fastapi>=0.115,<1",
+  "httpx>=0.27,<1",
+  "email-validator>=2.2,<3",
+  "keyring>=25.6,<26",
+  "pydantic>=2.10,<3",
+  "pydantic-settings>=2.7,<3",
+  "PyJWT>=2.10,<3",
+  "PyYAML>=6.0,<7",
+  "reportlab>=4.2,<5",
+  "rich>=13.9,<15",
+  "sqlalchemy>=2.0,<3",
+  "typer>=0.15,<1",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2,<2",
+  "mypy>=1.14,<2",
+  "pytest>=9.0.3,<10",
+  "pytest-asyncio>=1.4,<2",
+  "pytest-cov>=6,<7",
+  "ruff>=0.9,<1",
+  "types-PyYAML>=6.0,<7",
+  "types-reportlab>=4.2,<5",
+]
+postgres = ["psycopg[binary]>=3.2,<4"]
+worker = ["celery[redis]>=5.4,<6", "boto3>=1.36,<2"]
+
+[project.scripts]
+mcp-sentinel = "mcp_sentinel_cli.main:app"
+mcp-sentinel-api = "mcp_sentinel_api.main:run"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+  "packages/sentinel_core/sentinel_core",
+  "apps/api/mcp_sentinel_api",
+  "apps/cli/mcp_sentinel_cli",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-markers --disable-warnings"
+testpaths = ["tests"]
+pythonpath = ["packages/sentinel_core", "apps/api", "apps/cli"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = ["apps/api/alembic"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM"]
+ignore = ["S101", "E501", "B008", "S105"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/protocol/test_demo_server.py" = ["S603"]
+"apps/api/mcp_sentinel_api/main.py" = ["S104"]
+"apps/api/mcp_sentinel_api/services.py" = ["S108", "S603", "S607"]
+"examples/demo_mcp_server.py" = ["S104", "S108", "S603", "S607"]
+"scripts/verify_vertical.py" = ["S603"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["sentinel_core", "mcp_sentinel_api", "mcp_sentinel_cli"]

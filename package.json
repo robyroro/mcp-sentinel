@@ -1,0 +1,14 @@
+{
+  "name": "mcp-sentinel",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev": "pnpm --dir apps/web dev",
+    "build": "pnpm --dir apps/web build",
+    "lint": "pnpm --dir apps/web lint",
+    "typecheck": "pnpm --dir apps/web typecheck",
+    "test:e2e": "pnpm --dir apps/web test:e2e",
+    "screenshots": "pnpm --dir apps/web screenshots"
+  }
+}

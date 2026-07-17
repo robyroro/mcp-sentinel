@@ -1,0 +1,14 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Explicitly invalid local-only fixtures and development defaults"
+regexTarget = "match"
+regexes = [
+  '''sk-proj-SYNTHETIC_DEMO_KEY_0123456789ABC''',
+  '''SentinelDemo!2026''',
+  '''sentinel_dev_only''',
+  '''dev-gateway-token-change-me''',
+  '''replace-with-at-least-32-random-characters''',
+  '''replace-with-a-fernet-key-in-production''',
+]

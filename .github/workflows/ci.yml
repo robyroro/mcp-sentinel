@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e ".[dev,postgres,worker]"
+      - run: python -m ruff format --check packages apps tests examples scripts
+      - run: python -m ruff check packages apps tests examples scripts
+      - run: python -m mypy
+      - name: Unit, backend, protocol, security, and integration tests
+        run: python -m pytest --cov=sentinel_core --cov=mcp_sentinel_api --cov-report=term-missing
+      - name: Migration and deterministic seed smoke test
+        env:
+          SENTINEL_DATABASE_URL: sqlite:///./ci-migration.db
+        run: |
+          alembic upgrade head
+          python -m mcp_sentinel_api.seed_cli --force
+      - run: python -m build --wheel
+      - run: python scripts/check_docs.py
+
+  gateway:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/gateway/go.mod
+          cache-dependency-path: apps/gateway/go.mod
+      - run: test -z "$(gofmt -l .)"
+      - run: go vet ./...
+      - run: go test -race -cover ./...
+      - run: go build -trimpath -ldflags="-s -w" ./cmd/sentinel-gateway
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir apps/web lint
+      - run: pnpm --dir apps/web typecheck
+      - run: pnpm --dir apps/web build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm --dir apps/web test:e2e
+        env:
+          CI: "true"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: apps/web/test-results
+          retention-days: 7
+
+  docker:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: api
+            file: apps/api/Dockerfile
+          - name: gateway
+            file: apps/gateway/Dockerfile
+          - name: web
+            file: apps/web/Dockerfile
+          - name: demo
+            file: examples/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          push: false
+          tags: mcp-sentinel/${{ matrix.name }}:ci
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.example .env
+      - run: docker compose config --quiet
+
+  required:
+    if: always()
+    needs: [python, gateway, web, docker, compose]
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ contains(needs.*.result, 'failure') }}" = "false"
+      - run: test "${{ contains(needs.*.result, 'cancelled') }}" = "false"
