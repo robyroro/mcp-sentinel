@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     allow_registration: bool = False
     max_payload_bytes: int = 1_048_576
     signing_key_path: Path = Path(".sentinel/signing-key.pem")
+    sandbox_mount_roots: tuple[Path, ...] = ()
     raw_payload_retention_days: int = Field(default=7, ge=0, le=3650)
     cors_origins: tuple[str, ...] = ("http://localhost:3000",)
     api_version: str = "0.1.0"

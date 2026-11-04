@@ -679,5 +679,4 @@ def seed_database(database: Session, *, force: bool = False) -> dict[str, int | 
         "sandboxes": 8,
         "reports": 5,
         "demo_email": "admin@example.com",
-        "demo_password": DEMO_PASSWORD,
     }

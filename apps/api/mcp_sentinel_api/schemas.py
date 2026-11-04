@@ -52,15 +52,21 @@ class GatewayRecordResponse(BaseModel):
     is_error: bool = False
 
 
+class SandboxMount(BaseModel):
+    source: str = Field(min_length=1, max_length=4096)
+    destination: str = Field(min_length=1, max_length=4096)
+    read_only: bool = True
+
+
 class SandboxRequest(BaseModel):
     server_id: str
     profile: Literal[
         "no_network", "read_only_workspace", "development_workspace", "restricted_network", "custom"
     ]
-    image: str = Field(pattern=r"^[a-zA-Z0-9./:_@-]+$")
+    image: str = Field(pattern=r"^[a-zA-Z0-9][a-zA-Z0-9./:_@-]{0,255}$")
     memory_mb: int = Field(default=256, ge=64, le=4096)
     cpus: float = Field(default=0.5, gt=0, le=4)
     pids: int = Field(default=64, ge=16, le=512)
     timeout_seconds: int = Field(default=900, ge=10, le=86_400)
     network: bool = False
-    mounts: list[dict[str, Any]] = Field(default_factory=list, max_length=16)
+    mounts: list[SandboxMount] = Field(default_factory=list, max_length=16)

@@ -24,6 +24,8 @@ The production-shaped Compose profile uses a Docker socket proxy with a narrow A
 
 Host paths must resolve beneath operator-configured roots. Deny the Docker socket, device files, system roots, credential directories, and writable repository mounts unless explicitly required. Symlink and filesystem race defenses should be complemented with read-only bind mounts and a dedicated sandbox filesystem.
 
+Set `SENTINEL_SANDBOX_MOUNT_ROOTS` to a JSON array of dedicated absolute host directories, for example `["/srv/sentinel/workspaces"]`. The default is an empty allowlist, which rejects every bind mount. Both the requested path and its resolved symlink target must be beneath an allowed root; credential directories and Docker socket paths are rejected. Mount destinations must remain inside `/workspace/`. Container creation/removal uses the Docker SDK's structured API, so image and mount values are never parsed as CLI options. This does not remove host-filesystem race risks or make containers a VM boundary.
+
 ## Network rules
 
 `network=none` is preferred. When egress is needed, enforce it outside the container with a firewall/proxy that blocks loopback, link-local, private ranges, cluster control planes, and cloud metadata. Application-layer DNS checks alone are vulnerable to rebinding and TOCTOU changes.

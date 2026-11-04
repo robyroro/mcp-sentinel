@@ -3,13 +3,13 @@ from __future__ import annotations
 import copy
 import fnmatch
 import json
-import re
 import time
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import PurePosixPath
 from typing import Any
 
+import re2
 import yaml
 
 
@@ -103,9 +103,11 @@ class PolicyEngine:
                     if len(child) > self._MAX_PATTERN:
                         raise PolicyError("regex exceeds safe length")
                     try:
-                        re.compile(child)
-                    except re.error as exc:
-                        raise PolicyError(f"invalid regex: {exc}") from exc
+                        re2.compile(child)
+                    except re2.error as exc:
+                        raise PolicyError("invalid or unsupported RE2 regex") from exc
+                elif key in {"regex", "matches"}:
+                    raise PolicyError("regex must be a string")
                 self._validate_patterns(child)
         elif isinstance(value, list):
             for child in value:
@@ -251,7 +253,7 @@ class PolicyEngine:
             fnmatch.fnmatch(text, str(pattern)) for pattern in expected["matches_any"]
         ):
             return False
-        if "regex" in expected and re.search(str(expected["regex"]), text) is None:
+        if "regex" in expected and re2.search(str(expected["regex"]), text) is None:
             return False
         if "within" in expected and not self._within(text, expected["within"]):
             return False

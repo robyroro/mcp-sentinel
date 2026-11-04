@@ -168,12 +168,17 @@ def safe_path(value: str, *, must_exist: bool = False) -> Path:
     else:
         raw = Path(value)
         candidate = raw if raw.is_absolute() else ROOT / raw
-    resolved = candidate.resolve(strict=must_exist)
-    if os.path.commonpath((str(ROOT), str(resolved))) != str(ROOT):
+    resolved = os.path.realpath(candidate)
+    root = str(ROOT)
+    if resolved != root and not resolved.startswith(root + os.sep):
         raise ValueError("path escapes the demo workspace")
-    if any(part.lower() in {".env", ".ssh", ".aws", "credentials"} for part in resolved.parts):
+    if must_exist and not os.path.exists(resolved):
+        raise ValueError("fixture path does not exist")
+    if any(
+        part.lower() in {".env", ".ssh", ".aws", "credentials"} for part in Path(resolved).parts
+    ):
         raise ValueError("sensitive fixture path is unavailable at the server boundary")
-    return resolved
+    return Path(resolved)
 
 
 def call_tool(profile: str, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -327,10 +332,15 @@ def call_tool(profile: str, name: str, arguments: dict[str, Any]) -> dict[str, A
                     }
                 ]
             }
-    except (KeyError, ValueError, OSError, subprocess.SubprocessError, StopIteration) as exc:
+    except (KeyError, ValueError, OSError, subprocess.SubprocessError, StopIteration):
         return {
             "isError": True,
-            "content": [{"type": "text", "text": f"Tool execution error: {exc}"}],
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Tool execution failed; check the supplied arguments and server configuration.",
+                }
+            ],
         }
     return {"isError": True, "content": [{"type": "text", "text": f"Unknown tool: {name}"}]}
 

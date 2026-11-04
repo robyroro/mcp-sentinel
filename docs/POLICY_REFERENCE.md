@@ -72,6 +72,8 @@ limits:
 
 Rules can select `client`, `server`, `tool`, `method`, `resource_uri`, `environment`, `user_role`, `arguments`, and a time window. Scalar selectors are exact by default; selector objects may use `any_of`, `starts_with_any`, `contains_any`, `matches_any`, or a bounded `regex`.
 
+Regular expressions use RE2 with a 512-character pattern limit and linear-time matching. Python-specific backreferences and look-around assertions are unsupported and rejected when a policy is loaded. Existing policies using those constructs must be rewritten before activation; they do not fall back to a backtracking engine.
+
 Argument fields accept exact values and string/path selector objects. `within` performs normalized path containment rather than a raw prefix comparison. Network destinations must also pass the network guard, which resolves and classifies target IP addresses.
 
 ## Domain and response example

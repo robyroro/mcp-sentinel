@@ -3,13 +3,16 @@ from __future__ import annotations
 import hashlib
 import io
 import json
-import shutil
-import subprocess
+import os
 import zipfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
+import docker
+from docker.types import Mount
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from sentinel_core.audit import SigningKey, canonical_json
@@ -239,6 +242,15 @@ def verify_bundle(path: Path) -> tuple[bool, list[str]]:
     return True, messages
 
 
+@contextmanager
+def _docker_client(timeout: int) -> Iterator[docker.DockerClient]:
+    client = docker.from_env(timeout=timeout)
+    try:
+        yield client
+    finally:
+        client.close()
+
+
 class DockerSandboxManager:
     PROFILES = {
         "no_network": {"network": "none", "read_only": True},
@@ -249,84 +261,84 @@ class DockerSandboxManager:
     }
 
     def available(self) -> bool:
-        return shutil.which("docker") is not None
+        try:
+            with _docker_client(timeout=10) as client:
+                return bool(client.ping())
+        except docker.errors.DockerException:
+            return False
 
-    def build_command(self, request: SandboxRequest, name: str) -> list[str]:
+    def build_options(self, request: SandboxRequest, name: str) -> dict[str, Any]:
         profile = self.PROFILES[request.profile]
         if request.network and request.profile != "restricted_network":
             raise ValueError("network access is only valid for the restricted_network profile")
-        command = [
-            "docker",
-            "run",
-            "--detach",
-            "--name",
-            name,
-            "--user",
-            "65532:65532",
-            "--cap-drop",
-            "ALL",
-            "--security-opt",
-            "no-new-privileges:true",
-            "--pids-limit",
-            str(request.pids),
-            "--memory",
-            f"{request.memory_mb}m",
-            "--cpus",
-            str(request.cpus),
-            "--network",
-            str(profile["network"]),
-            "--tmpfs",
-            "/tmp:rw,noexec,nosuid,size=64m",
-            "--stop-timeout",
-            "10",
-        ]
-        if profile["read_only"]:
-            command.append("--read-only")
+        mounts = []
+        roots = [os.path.realpath(root) for root in get_settings().sandbox_mount_roots]
         for mount in request.mounts:
-            source = Path(str(mount.get("source", ""))).resolve(strict=True)
-            destination = str(mount.get("destination", ""))
-            if not destination.startswith("/workspace/") or ".." in Path(destination).parts:
+            # The allowlist comes only from operator settings, never the API.
+            # Check both lexical containment and the resolved symlink target.
+            absolute = os.path.abspath(mount.source)
+            if not any(absolute.startswith(root + os.sep) for root in roots):
+                raise ValueError("mount source must be beneath an operator-configured root")
+            source = os.path.realpath(absolute)
+            if not any(source.startswith(root + os.sep) for root in roots):
+                raise ValueError("mount symlink escapes the configured roots")
+            if not os.path.exists(source):
+                raise ValueError("mount source is unavailable")
+            if any(
+                part.lower() in {".ssh", ".aws", ".kube", ".env", "credentials", "docker.sock"}
+                for part in Path(source).parts
+            ):
+                raise ValueError("sensitive mount source is forbidden")
+            destination = PurePosixPath(mount.destination)
+            if (
+                not str(destination).startswith("/workspace/")
+                or ".." in destination.parts
+                or "\\" in mount.destination
+            ):
                 raise ValueError("mount destination must remain inside /workspace")
-            mode = "ro" if mount.get("read_only", True) else "rw"
-            command.extend(["--mount", f"type=bind,src={source},dst={destination},{mode}"])
-        command.append(request.image)
-        return command
+            mounts.append(
+                Mount(
+                    target=str(destination), source=source, type="bind", read_only=mount.read_only
+                )
+            )
+        return {
+            "image": request.image,
+            "detach": True,
+            "name": name,
+            "user": "65532:65532",
+            "cap_drop": ["ALL"],
+            "security_opt": ["no-new-privileges:true"],
+            "pids_limit": request.pids,
+            "mem_limit": request.memory_mb * 1024 * 1024,
+            "nano_cpus": int(request.cpus * 1_000_000_000),
+            "network": str(profile["network"]),
+            "tmpfs": {"/tmp": "rw,noexec,nosuid,size=64m"},
+            "read_only": bool(profile["read_only"]),
+            "mounts": mounts,
+        }
 
     def start(self, database: Session, sandbox: Sandbox, request: SandboxRequest) -> str:
-        if not self.available():
-            raise RuntimeError("Docker CLI is not installed or available to the sandbox manager")
-        name = f"sentinel-{sandbox.id[:12]}"
-        result = subprocess.run(
-            self.build_command(request, name),
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(
-                "Docker rejected the sandbox configuration: " + result.stderr.strip()[:500]
-            )
-        sandbox.container_id = result.stdout.strip()
+        options = self.build_options(request, f"sentinel-{sandbox.id[:12]}")
+        try:
+            with _docker_client(timeout=30) as client:
+                container = client.containers.run(**options)
+                container_id = str(container.id)
+        except docker.errors.DockerException as exc:
+            raise RuntimeError("Docker could not start the requested sandbox") from exc
+        sandbox.container_id = container_id
         sandbox.status = "running"
         sandbox.started_at = now()
         database.flush()
-        return sandbox.container_id
+        return container_id
 
     def stop(self, database: Session, sandbox: Sandbox) -> None:
-        if not self.available() or not sandbox.container_id:
+        if not sandbox.container_id:
             raise RuntimeError("running Docker sandbox is unavailable")
-        result = subprocess.run(
-            ["docker", "rm", "--force", sandbox.container_id],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(
-                "Docker could not terminate the sandbox: " + result.stderr.strip()[:500]
-            )
+        try:
+            with _docker_client(timeout=30) as client:
+                client.containers.get(sandbox.container_id).remove(force=True)
+        except docker.errors.DockerException as exc:
+            raise RuntimeError("Docker could not terminate the sandbox") from exc
         sandbox.status = "stopped"
         sandbox.stopped_at = now()
         sandbox.termination_reason = "stopped_by_reviewer"

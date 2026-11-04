@@ -5,7 +5,8 @@ from .seed import seed_database
 def main() -> None:
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as database:
-        print(seed_database(database, force=True))
+        seed_database(database, force=True)
+        print("Synthetic demo dataset seeded.")
 
 
 if __name__ == "__main__":
