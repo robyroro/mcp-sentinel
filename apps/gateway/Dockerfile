@@ -1,4 +1,4 @@
-FROM golang:1.26.5-alpine3.24 AS build
+FROM golang:1.26.10-alpine3.24 AS build
 WORKDIR /src
 COPY apps/gateway/go.mod ./
 COPY apps/gateway/cmd ./cmd
