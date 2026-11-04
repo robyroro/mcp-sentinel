@@ -170,6 +170,9 @@ def safe_path(value: str, *, must_exist: bool = False) -> Path:
         candidate = raw if raw.is_absolute() else ROOT / raw
     resolved = os.path.realpath(candidate)
     root = str(ROOT)
+    if not resolved.startswith(root):
+        raise ValueError("path escapes the demo workspace")
+    # A sibling such as workspace-other shares the prefix but is not a child.
     if resolved != root and not resolved.startswith(root + os.sep):
         raise ValueError("path escapes the demo workspace")
     if must_exist and not os.path.exists(resolved):
