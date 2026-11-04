@@ -1,0 +1,49 @@
+name: Bug report
+description: Report a reproducible MCP Sentinel defect.
+title: "[Bug]: "
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include real credentials, private payloads, or vulnerability details. Use the private security channel for security impact.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: v0.1.0 or commit SHA
+    validations: {required: true}
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options: [Gateway, API, Web console, Worker, CLI, Sandbox, Audit, Documentation]
+    validations: {required: true}
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Minimal steps using synthetic data only.
+    validations: {required: true}
+  - type: textarea
+    id: expected
+    attributes: {label: Expected behavior}
+    validations: {required: true}
+  - type: textarea
+    id: actual
+    attributes: {label: Actual behavior and sanitized logs}
+    validations: {required: true}
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: OS, Docker/Go/Python/Node versions, deployment mode
+    validations: {required: true}
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety checks
+      options:
+        - label: I removed secrets and private data.
+          required: true
+        - label: This is not a vulnerability report.
+          required: true

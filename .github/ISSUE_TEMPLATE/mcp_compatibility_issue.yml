@@ -1,0 +1,40 @@
+name: MCP compatibility issue
+description: Report a protocol or transport interoperability problem.
+title: "[MCP compatibility]: "
+labels: [protocol, compatibility, needs-triage]
+body:
+  - type: input
+    id: revision
+    attributes:
+      label: MCP protocol revision
+      placeholder: "2025-11-25"
+    validations: {required: true}
+  - type: dropdown
+    id: transport
+    attributes:
+      label: Transport
+      options: [stdio, Streamable HTTP POST, Streamable HTTP SSE/GET, Streamable HTTP DELETE, Other/adapter]
+    validations: {required: true}
+  - type: textarea
+    id: peers
+    attributes:
+      label: Client and server
+      description: Names, versions, and public links if available.
+    validations: {required: true}
+  - type: textarea
+    id: transcript
+    attributes:
+      label: Minimal sanitized transcript
+      description: Preserve ID types and methods; remove all real data and credentials.
+    validations: {required: true}
+  - type: textarea
+    id: expectation
+    attributes: {label: Expected and actual behavior}
+    validations: {required: true}
+  - type: checkboxes
+    id: sensitive
+    attributes:
+      label: Data safety
+      options:
+        - label: I sanitized protocol payloads and server logs.
+          required: true

@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use MCP Sentinel in research, please cite this software."
+title: "MCP Sentinel"
+type: software
+version: 0.1.0
+date-released: 2026-07-16
+license: Apache-2.0
+repository-code: "https://github.com/OWNER/mcp-sentinel"
+url: "https://github.com/OWNER/mcp-sentinel"
+authors:
+  - name: "MCP Sentinel contributors"
+keywords:
+  - Model Context Protocol
+  - MCP
+  - security gateway
+  - policy engine
+  - agent security

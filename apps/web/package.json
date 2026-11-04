@@ -1,0 +1,40 @@
+{
+  "name": "@mcp-sentinel/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0 --port 3000",
+    "build": "next build",
+    "build:e2e": "cross-env SENTINEL_API_ORIGIN=http://127.0.0.1:8011 next build",
+    "serve:e2e": "pnpm build:e2e && node scripts/serve-e2e.mjs",
+    "start": "next start --hostname 0.0.0.0 --port 3000",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "screenshots": "playwright test tests/screenshots.spec.ts --project=chromium"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.101.2",
+    "@tanstack/react-table": "8.21.3",
+    "lucide-react": "1.24.0",
+    "next": "16.4.1",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "react-hook-form": "7.81.0",
+    "recharts": "3.9.2",
+    "zod": "4.6.6"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
+    "@playwright/test": "1.61.1",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "cross-env": "10.1.0",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "16.4.1",
+    "tailwindcss": "4.3.3",
+    "typescript": "^5.9.3"
+  }
+}
